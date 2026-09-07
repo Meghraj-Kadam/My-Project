@@ -1,16 +1,13 @@
 name: Maven Build and Test
-
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -32,11 +29,24 @@ jobs:
         run: mvn -B clean compile
 
       - name: Run TestNG tests
-        run: mvn -B test
+        run: mvn -B test -Dheadless=true
 
-      # 👇 Add new steps like this
-      - name: Print a custom message
-        run: echo "Build and tests completed successfully!"
+      - name: Send email report
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "CI Build Report - ${{ job.status }} - ${{ github.repository }}"
+          to: ${{ secrets.EMAIL_TO }}
+          from: GitHub Actions
+          body: |
+            Build Status: ${{ job.status }}
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Triggered by: ${{ github.actor }}
 
-      - name: List target directory
-        run: ls -la target/
+            View full run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
